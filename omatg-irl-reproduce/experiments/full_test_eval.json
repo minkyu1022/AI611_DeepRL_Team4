@@ -1,0 +1,30 @@
+{
+  "n_structures": 9046,
+  "ref_energy_per_atom": -5.764824505730198,
+  "results": {
+    "baseline (pretrained, Nt=50)": {
+      "match_rate": 0.5959540128233474,
+      "mean_rmsd": 0.20337065159033477,
+      "corr_rmsd": 0.3232225494940852,
+      "gen_energy_per_atom": -4.572857281624032,
+      "relative_energy_per_atom": 1.1919672241061665,
+      "invalid_energy_rate": 0.006411673667919522
+    },
+    "velocity-based OMatG-IRL": {
+      "match_rate": 0.6747733804996684,
+      "mean_rmsd": 0.0860825885444257,
+      "corr_rmsd": 0.22069954902445,
+      "gen_energy_per_atom": -5.464662907282077,
+      "relative_energy_per_atom": 0.3001615984481214,
+      "invalid_energy_rate": 0.007296042449701525
+    },
+    "score-based OMatG-IRL": {
+      "match_rate": 0.6741101039133318,
+      "mean_rmsd": 0.08494902020861414,
+      "corr_rmsd": 0.22020994088349868,
+      "gen_energy_per_atom": -5.5248760808201345,
+      "relative_energy_per_atom": 0.23994842491006363,
+      "invalid_energy_rate": 0.004200751713464515
+    }
+  }
+}

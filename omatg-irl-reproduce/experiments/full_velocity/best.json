@@ -1,0 +1,10 @@
+{
+  "iter": 150,
+  "match_rate": 0.625,
+  "mean_rmsd": 0.07615889902534576,
+  "corr_rmsd": 0.2350993118908411,
+  "gen_energy_per_atom": -5.505011646194346,
+  "ref_energy_per_atom": -5.721608805605725,
+  "relative_energy_per_atom": 0.21659715941137936,
+  "invalid_energy_rate": 0.015625
+}

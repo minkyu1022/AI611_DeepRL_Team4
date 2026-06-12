@@ -1,0 +1,22 @@
+# Environment
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Upstream OMatG framework — clone separately (see README), not vendored
+OMatG/
+
+# Copyrighted source papers
+papers/
+
+# Local Claude settings
+.claude/
+
+# Large regenerable artifacts (trained checkpoints, verbose logs)
+*.pt
+*.log
+experiments/_*
+experiments/**/lightning_logs/
+
+# Keep: experiments/**/metrics*.csv, best.json, *.json, *.png, baseline/*.xyz
