@@ -51,9 +51,15 @@ paper-comparable results. This notebook is the extension report that builds on t
 
 - Reproduction checkpoint: Hugging Face `OMatG/MP-20-CSP`, subfolder `Trig-SDE-Gamma/`.
 - Extension checkpoint: Hugging Face `OMatG/MP-20-DNG`, subfolder `Linear-SDE-Gamma/`.
-- MP-20 LMDB data: `data/mp_20/train.lmdb` or `data/mp_20/test.lmdb`, resolved by OMatG's
-  `StructureDataset` relative to the installed `omg` package. The data ships with the OMatG
-  repository under `OMatG/omg/data/mp_20/`, so there is no separate dataset download step here.
+- MP-20 LMDB data: `omg/data/mp_20/train.lmdb` or `omg/data/mp_20/test.lmdb`, resolved by OMatG's
+  `StructureDataset` relative to the OMatG checkout root. The data ships with the OMatG repository
+  under `omg/data/mp_20/`, so there is no separate dataset download step here.
+
+**Running the live extension.** The S.U.N.-reward RL code lives in `omg.irl`, which upstream OMatG
+does not ship. This folder vendors those modules under `omg_irl/` plus the reward caches under
+`cache/`. The live cell calls `setup_live_demo.setup_omatg()`, which clones upstream OMatG, overlays
+the `omg.irl` modules and caches into the clone, and installs it — so the demo runs from a fresh
+checkout of this repository with no manual wiring.
 """
     ),
     markdown(
@@ -155,9 +161,10 @@ def available(module_name):
 
 missing = [name for name in required if not available(name)]
 if missing:
-    print("Live DNG execution is disabled in this environment.")
-    print("Missing modules:", ", ".join(missing))
-    print("The notebook remains a report; use the supplementary repo for the reproduced OMatG-IRL code.")
+    print("omg.irl is not importable in the current process yet:", ", ".join(missing))
+    print("That is expected before setup -- the next cell calls setup_live_demo.setup_omatg(),")
+    print("which clones OMatG, overlays the vendored omg.irl modules + caches, and installs them.")
+    print("Heavy prerequisites (torch, chgnet, pymatgen, matminer) must already be in the environment.")
 else:
     print("Live DNG execution prerequisites are available.")
 """
@@ -165,9 +172,13 @@ else:
     markdown(
         """## 4. Optional Live Demo Path
 
-The cell below is deliberately gated by `RUN_LIVE_DNG_DEMO = False`. Turning it on runs the extension
-only when the external DNG implementation modules are available in `omg.irl`. Keeping the default off
-makes the notebook safe to open in a clean grading environment.
+The cell below is gated by `RUN_LIVE_DNG_DEMO = False` so the notebook stays safe to open in a clean
+grading environment. Set it to `True` in an environment that has the heavy scientific stack
+(torch, torch_scatter, pymatgen, matminer, chgnet) and the cell becomes self-contained: it calls
+`setup_live_demo.setup_omatg()` to clone upstream OMatG, overlay the vendored `omg.irl` extension
+modules and reward caches from this folder, install the package, then runs a small DNG rollout,
+scores it with the S.U.N. reward, and takes a few GRPO steps. No separate OMatG checkout or manual
+`omg.irl` wiring is required.
 """
     ),
     code(
@@ -175,9 +186,29 @@ makes the notebook safe to open in a clean grading environment.
 
 if RUN_LIVE_DNG_DEMO:
     import os
+    import sys
+    from pathlib import Path
+
+    # Locate this extension folder (it holds setup_live_demo.py + the vendored omg.irl modules
+    # and reward caches) regardless of the kernel's starting directory.
+    ext_dir = Path.cwd()
+    if not (ext_dir / "setup_live_demo.py").exists():
+        for cand in [*ext_dir.parents,
+                     *ext_dir.glob("**/omatg-irl-extension"),
+                     *(p / "omatg-irl-extension" for p in [ext_dir, *ext_dir.parents])]:
+            if (cand / "setup_live_demo.py").exists():
+                ext_dir = cand
+                break
+    sys.path.insert(0, str(ext_dir))
+
+    # Clone upstream OMatG, overlay the vendored omg.irl modules + reward caches, install. Idempotent.
+    from setup_live_demo import setup_omatg
+    repo = setup_omatg()
+    os.chdir(repo)
+    sys.path.insert(0, str(repo))
+
     import torch
     import numpy as np
-    from pathlib import Path
     from huggingface_hub import hf_hub_download
     from torch_geometric.data import Batch
     from omg.datamodule import StructureDataset, OMGDataset
@@ -190,10 +221,6 @@ if RUN_LIVE_DNG_DEMO:
     from omg.irl.structures import omgdata_to_ase
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    repo = Path.cwd()
-    while repo != repo.parent and not (repo / "omg").exists():
-        repo = repo.parent
-    os.chdir(repo)
 
     ckpt_dir = repo / "ckpts" / "dng_linear_sde_gamma"
     ckpt_dir.mkdir(parents=True, exist_ok=True)
@@ -203,7 +230,7 @@ if RUN_LIVE_DNG_DEMO:
             target.write_bytes(Path(hf_hub_download("OMatG/MP-20-DNG", filename)).read_bytes())
 
     module = load_pretrained(str(ckpt_dir), map_location=device).to(device).eval()
-    templates = OMGDataset(StructureDataset("data/mp_20/train.lmdb", lazy_storage=True,
+    templates = OMGDataset(StructureDataset("omg/data/mp_20/train.lmdb", lazy_storage=True,
                                             floating_point_precision="32-true"))
 
     def sample_base(n):
@@ -228,7 +255,7 @@ if RUN_LIVE_DNG_DEMO:
     trainer = GRPOTrainer(module, reward, templates, cfg, device=device)
     trainer.train(n_iterations=4)
 else:
-    print("Live DNG demo skipped. Set RUN_LIVE_DNG_DEMO = True in an environment with omg.irl.")
+    print("Live DNG demo skipped. Set RUN_LIVE_DNG_DEMO = True in an environment with the heavy stack.")
 """
     ),
     markdown(
